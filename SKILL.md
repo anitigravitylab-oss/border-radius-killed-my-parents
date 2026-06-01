@@ -1,6 +1,6 @@
 ---
 name: border-radius-killed-my-parents
-description: AIデザインの典型的な悪パターン（border-radius過多・pill型バッジ・LP思考レイアウト・説明文化コピー・ビジュアル不足・塗りつぶしによる区別・日本語フォントミス・技術名による説明・絵文字等）をプロジェクトから検出しカテゴリ単位で修正する。/border-radius-killed-my-parents で呼び出す。
+description: Detects and fixes typical AI-generated design anti-patterns (excessive border-radius, pill badges, LP-style layout, prose-ified copy, missing visuals, fill-based separation, font mistakes, tech-name descriptions, emoji) from a project, category by category. Invoke with /border-radius-killed-my-parents.
 user-invocable: true
 allowed-tools:
   - Bash
@@ -9,273 +9,271 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-# /fix-ai-design — AI典型デザイン悪パターン修正
+# /border-radius-killed-my-parents — AI Design Anti-Pattern Fixer
 
-Arguments: `[対象ディレクトリ]`（省略時はカレントディレクトリ）
+Arguments: `[target directory]` (defaults to current directory)
 
-## 概要
+## Overview
 
-AIが生成しがちな「それっぽいけど野暮ったい」パターンを検出し、カテゴリ単位でY/N確認しながら一括修正する。
+Detects "looks okay but feels clunky" patterns that AI tends to generate, and fixes them category by category with Y/N confirmation.
 
-## 検出するパターン
+## Patterns
 
-| カテゴリ | 検出条件 | 修正方針 |
-|----------|----------|----------|
-| **A: border-radius過多** | 角丸は小さいほど誠実に見える。`border-radius` の値が過大な要素がある。目安として `12px` 以上を確認対象とする（例: `border-radius: 24px` / Tailwind の `rounded-xl` 以上 / `9999px`） | `10px` に統一（例外: `border-radius: 50%` の円形要素はスキップ）|
-| **B: pill型バッジ** | 情報をバッジ・タグという装飾的要素で包まない。テキストで書けることはテキストで書く。形状として「小型・border-radiusが大きい（目安 `20px` 以上）・pill形状」のラベル要素が多用されている場合に検出する（クラス名は問わない） | バッジ要素をHTMLから削除。バッジしか入っていない親要素も空になる場合は合わせて削除。CSSのバッジ定義も削除 |
-| **C: LP思考レイアウト** | 1ページ1責務。スクロールで複数の関心事を縦積みしない。単一ページに `<section>` が3つ以上ある、または独立した関心事が1スクロールに詰め込まれている場合に検出する | 自動修正不可。ページ分割とナビゲーション遷移への移行を提案する |
-| **D: アクセントカラー過多** | 意図なく有彩色を使わない。白・黒・グレーだけでほとんどのUIは成立する。有彩色（グレー系・黒・白以外の色相を持つ色）がテキスト・背景・ボーダー・グラデーションに使われている場合に検出する（色コードの種類は問わない） | 自動修正不可。特別な理由がない限り**白ベース・黒ポイント**への移行を提案する（背景: 白、テキスト: 黒、アクセント: 黒またはダークグレー）|
-| **E: ページの情報責務の欠如** | 各ページが担うべき情報の責務を果たしていない。トップが自己紹介・ナビのみで最重要情報が奥に埋まっている、またはサブページが何を見せるページなのか一瞬で分からない | 自動修正不可。以下を提案する：（1）トップには最重要情報の要約を置く（2）サブページは1ページ1責務で設計する（3）各ページを開いた瞬間に「このページで何ができるか」が分かる構成にする（4）サブページへの遷移はナビゲーション（ヘッダー・サイドバー等、サイトの構造に合わせた形）に集約する |
-| **F: テキストの説明文化** | トップのキャッチコピー・サブページの見出し・セクションタイトルが「〇〇を中心に△△を手がけています」のような説明文になっている。どのページでも技術・機能・実績を羅列するだけで、ユーザーに何も感じさせない | 自動修正不可。「何がどう変わるか」を普通に説明する文に書き直すことを提案する。トップのキャッチコピーだけでなく、サブページの見出し・説明文・CTAテキストも同様に検査する。手順Fの原則と例を参考にユーザーに提示する |
-| **G: ページごとのビジュアル不足** | 各ページにテキストとナビゲーションしかなく、そのページの目的を裏付ける実物（プロダクト画面・制作物・図・比較など）が置かれていない | 自動修正不可。ページの目的に応じて不足しているものを提案する。トップは（1）名前/サービス名（2）一行コピー（3）実物ビジュアル（4）導線の4要素を確認する。サブページはそのページが担う情報をビジュアルで補強できているかを確認する。実装時はホバーアニメーション等の過剰な動きをつけない |
-| **H: 塗りつぶしによる区別** | ボーダーや余白で区別できるなら、背景色で塗りつぶさない。ボタン・カード・セクション区切り・サイドバーなど任意の要素において、`border` がすでにあるにもかかわらず純白（`#ffffff` / `white`）以外の背景色で塗りつぶしている場合に検出する（薄いグレーも含む。クラス名は問わない） | 自動修正不可。ボーダーだけで区別できる形への変更を提案する。CTAはテキストリンクで代替する（メインCTA: 太字＋アンダーライン、サブCTA: 細字＋グレー＋アンダーライン）。装飾を削った分、周囲の余白を広めに取る |
-| **I: 日本語サイトのフォント設計ミス** | 日本語サイトで英字フォントのみ指定（`"Inter", sans-serif` 等）／本文に強いマイナス `letter-spacing`（`-0.03em`以下）／`line-height: 1.4` 以下の狭すぎる行間／`font-weight: 300` の細字本文／Google Fonts のweight読み込みすぎ（4種類以上）| 以下のルールで修正する：`font-family` に日本語フォントを必ず含める（システムフォント優先）／本文 `line-height: 1.75`／本文 `letter-spacing: 0〜0.02em`／見出しのみ `letter-spacing: -0.02〜-0.03em`／本文 `font-weight: 400`／Google Fonts は `400;500;700` の3種のみ |
-| **J: タップハイライト未消去** | モバイルでリンク・ボタンをタップしたときに青いハイライトが出る（`-webkit-tap-highlight-color` 未設定） | `a, button { -webkit-tap-highlight-color: transparent; }` をグローバルに追加する |
-| **K: サブページのスクロール過多** | サブページ（トップ以外）がスクロールを必要とする縦長レイアウトになっている。原因は3種類: （1）過大な上下padding（2）情報の取捨選択の欠如（3）情報量に対してカードグリッドが非効率 | （1）は自動修正: セクションのpaddingが `80px` 以上を目安に `40px` に圧縮（目安であり絶対値ではない）、`min-height: 100svh` はサブページから削除。（2）（3）は提案のみ: アイテムが5件以上を目安に「絞り込みと別ページ化」を提案（目安であり絶対値ではない）。カードグリッドよりリスト形式の方が密度高く収まる場合はレイアウト変更を提案。判断軸: 「このページのスクロールは正当化できるか？」をユーザーに問いかける |
-| **L: 技術名・手段で説明している** | 技術名・実装名・ツール名を使って説明しない。知らない人には意味不明で、知っている人には冗長。形式は問わない——散文テキスト内に書く（「Hono + Workers で構築」）場合も、タグリスト・バッジ群・インラインリストなどUIパーツとして並べる場合も同じ問題。HTMLを読んでコンテンツの内容で判断する | 形式によって修正方法が異なる。（1）散文テキストの場合: 自動修正不可。「何ができるか・使うとどうなるか」を主語にした説明に書き直すことを提案する。下記の原則と例を参考にユーザーに提示する。（2）UIパーツ（タグリスト・バッジ群等）の場合: 自動修正可能。該当UIパーツをHTMLから削除。空になった親要素も合わせて削除。対応するCSS定義も削除 |
-| **M: 絵文字の使用** | 絵文字はUIに使わない。アイコンライブラリで代替できる。ファイルを読んで絵文字が含まれているかを確認する。`<code>` / `<pre>` / `<meta>` 内は対象外 | 自動修正可能。絵文字の意味・文脈に対応する Lucide アイコン（MIT/ISC ライセンス・商用無料）のインラインSVGに置き換える。SVGは `https://unpkg.com/lucide-static@latest/icons/{name}.svg` から取得。インラインに埋め込む際は `width="1em" height="1em" style="display:inline;vertical-align:-0.125em"` を付与してテキスト行内に収める |
+| Category | Detection condition | Fix policy |
+|----------|---------------------|------------|
+| **A: Excessive border-radius** | Smaller corner radius looks more honest. Any element with an oversized `border-radius`. Threshold guideline: `12px` or more (e.g. `border-radius: 24px` / Tailwind `rounded-xl`+ / `9999px`) | Normalize to `10px`. Exception: skip `border-radius: 50%` circular elements |
+| **B: Pill badges** | Don't wrap information in decorative badge/tag elements. If it can be written as text, write it as text. Detect label elements that are small, have large border-radius (guideline: `20px`+), and are pill-shaped. Class name is irrelevant. | Delete badge elements from HTML. Also delete parent elements that become empty. Delete CSS badge definitions. |
+| **C: LP-style layout** | One page, one responsibility. Don't stack multiple concerns in a single scroll. Detect when a single page has 3+ `<section>` elements, or independent concerns are crammed into one scroll. Section names are irrelevant. | Cannot auto-fix. Propose splitting into separate pages with navigation transitions. |
+| **D: Excessive accent color** | Don't use chromatic colors without intent. White, black, and grey are enough for most UIs. Detect chromatic colors (any hue other than grey/black/white) used in text, backgrounds, borders, or gradients. Color code format is irrelevant. | Cannot auto-fix. Propose migration to **white base + black accent** (background: white, text: black, accent: black or dark grey). |
+| **E: Missing page responsibility** | Each page must fulfill its information responsibility. Detect when the top page is only an intro/nav with the most important info buried deeper, or when a subpage's purpose isn't immediately clear. | Cannot auto-fix. Propose: (1) put a summary of the most important info on the top page (2) one page = one responsibility (3) make each page's purpose clear at a glance (4) consolidate navigation into header/sidebar etc. |
+| **F: Prose-ified copy** | Top page copy, subpage headings, and section titles read like descriptions ("I specialize in X and handle Y"). Every page just lists features/tech/achievements without making the user feel anything. | Cannot auto-fix. Propose rewriting as plain explanation of "what changes and how." Check not just the top copy but also subpage headings, descriptions, and CTA text. Present suggestions based on the principles in Step F. |
+| **G: Missing visuals per page** | Each page has only text and navigation, with no real artifact (product screenshot, work sample, diagram, comparison) backing up the page's purpose. | Cannot auto-fix. Propose what's missing based on the page's purpose. For the top page, check for: (1) name/service name (2) one-line copy (3) real visual (4) call to action. Don't add hover animations or excessive motion. |
+| **H: Fill-based separation** | If border or whitespace can do the job, don't fill with background color. Detect any element that already has a `border` but is filled with a non-pure-white background (including light grey). Class name is irrelevant. | Cannot auto-fix. Propose switching to border-only separation. Replace CTAs with text links (main CTA: bold + underline, sub CTA: light + grey + underline). Add more whitespace where decoration was removed. |
+| **I: Japanese site font mistakes** | Japanese site with only Latin fonts specified (`"Inter", sans-serif` etc.) / strong negative `letter-spacing` on body text (`-0.03em` or less) / `line-height: 1.4` or less / `font-weight: 300` body text / too many Google Fonts weights (4+) | Fix as follows: add Japanese fonts to `font-family` (prefer system fonts) / body `line-height: 1.75` / body `letter-spacing: 0–0.02em` / headings only `letter-spacing: -0.02–-0.03em` / body `font-weight: 400` / Google Fonts: 3 weights only (`400;500;700`) |
+| **J: Tap highlight not removed** | Blue highlight appears when tapping links/buttons on mobile (`-webkit-tap-highlight-color` not set) | Add `a, button { -webkit-tap-highlight-color: transparent; }` globally |
+| **K: Subpage scroll overload** | Subpages (non-top) require scrolling due to: (1) excessive padding (2) lack of information curation (3) card grid inefficient for content volume | (1) Auto-fix: compress section padding ≥ `80px` to `40px` (guideline, not absolute), remove `min-height: 100svh` from subpages. (2)(3) Propose only: suggest trimming to 3–5 items + "see all" link for pages with 5+ items (guideline). Propose list layout if it fits better than card grid. Ask: "Is the scroll on this page justified by the content?" |
+| **L: Describing with tech names** | Don't explain using technology names, implementation names, or tool names. Meaningless to those who don't know them; redundant to those who do. Format doesn't matter — writing them in prose ("Built with Hono + Workers") or listing as UI parts (tag list, badge group, inline list) is the same problem. Read the HTML and judge by content. | Fix method varies by format. (1) Prose text: cannot auto-fix. Propose rewriting with the user or product as subject — "what it does / what changes when you use it." Present suggestions based on the principles and examples in Step L. (2) UI parts (tag lists, badge groups, etc.): auto-fix. Delete the UI parts from HTML. Delete empty parent elements. Delete corresponding CSS definitions. |
+| **M: Emoji usage** | Don't use emoji in UI. Icon libraries can replace them. Read the file to check if emoji are present. Exclude content inside `<code>` / `<pre>` / `<meta>` tags. | Auto-fix. Replace each emoji with a Lucide icon SVG (MIT/ISC license, free for commercial use) that matches the emoji's meaning and context. Fetch SVG from `https://unpkg.com/lucide-static@latest/icons/{name}.svg`. When embedding inline, add `width="1em" height="1em" style="display:inline;vertical-align:-0.125em"` to keep it in the text flow. |
 
-## 手順
+## Steps
 
-### 1. 対象ディレクトリの確定
+### 1. Confirm target directory
 
-引数があればそれを使う。なければカレントディレクトリ。
+Use the argument if provided, otherwise use current directory.
 
 ```bash
 TARGET=${1:-.}
 ```
 
-### 2. 対象ファイルの収集
+### 2. Collect target files
 
-以下の拡張子を再帰的にスキャン：`.css` / `.scss` / `.sass` / `.less` / `.html` / `.jsx` / `.tsx` / `.vue` / `.svelte`
+Recursively scan for: `.css` / `.scss` / `.sass` / `.less` / `.html` / `.jsx` / `.tsx` / `.vue` / `.svelte`
 
 ```bash
 find "$TARGET" -type f \( \
   -name "*.css" -o -name "*.scss" -o -name "*.sass" -o -name "*.less" \
   -o -name "*.html" -o -name "*.jsx" -o -name "*.tsx" \
   -o -name "*.vue" -o -name "*.svelte" \
-\) \
+) \
   ! -path "*/node_modules/*" \
   ! -path "*/.git/*" \
   ! -path "*/dist/*" \
   ! -path "*/build/*"
 ```
 
-### 3. カテゴリ別に検出・集計
+### 3. Detect and tally by category
 
-カテゴリによって検出方法が異なる。
+Detection method differs by category.
 
-**grepで検出できるもの（A/I/J）:**
-grepで該当箇所を抽出し、以下を記録：
-- 該当ファイル数
-- 該当行数（合計）
-- 代表的な行（最大3件）をプレビュー表示
+**grep-detectable (A/I/J):**
+Extract matches with grep and record:
+- Number of files matched
+- Total number of lines matched
+- Up to 3 representative lines as preview
 
-表示例：
+Example output:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[A] border-radius 過多  — 5ファイル / 18箇所
+[A] Excessive border-radius  — 5 files / 18 occurrences
   src/components/Button.css:12    border-radius: 9999px
   src/components/Card.tsx:34      className="rounded-full"
   src/styles/global.css:88        border-radius: 50px
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-**ファイルを読んで内容・構造を判断するもの（B/C/D/E/F/G/H/K/L/M）:**
-Read ツールで対象ファイルを読み、内容を確認して検出する。grepでは判断できないため必ずファイル全体を読むこと。
+**Read-and-judge (B/C/D/E/F/G/H/K/L/M):**
+Read files with the Read tool and confirm content. grep cannot make these judgments — always read the full file.
 
-Bの検出時の注意: pill形状の要素を見つけたら、内容が技術名・ツール名・言語名かどうかを確認する。技術名であればBではなくLとして報告する（内容優先）。
+Note for B detection: when you find a pill-shaped element, check whether the content is a tech name / tool name / language name. If so, report it as L, not B (content takes priority).
 
-### 4. カテゴリごとにAskUserQuestionで確認
+### 4. Confirm per category with AskUserQuestion
 
-検出されたカテゴリのみ質問する（0件のカテゴリはスキップ）。
+Only ask about detected categories (skip categories with 0 hits).
 
-AskUserQuestion を使い、各カテゴリに対して：
-- `Fix` — 自動修正可能なもの（A/B/I/J/K一部/L一部/M）はコードを修正する。自動修正不可のもの（C/D/E/F/G/H/L散文部分）は具体的な改善案をユーザーに提示する。K・L はパターンによって自動修正と提案の両方を行う
-- `Skip` — このカテゴリはスキップ
+For each category, offer:
+- `Fix` — auto-fixable ones (A/B/I/J/K partial/L partial/M): apply code changes. Non-auto-fixable ones (C/D/E/F/G/H/L prose): present concrete improvement suggestions. K and L do both depending on the case.
+- `Skip` — skip this category
 
-の2択を提示。AskUserQuestion は1回に最大4件までしか質問できない。検出カテゴリが5件以上の場合は4件ずつに分割して複数回呼ぶこと。
+AskUserQuestion accepts a maximum of 4 questions per call. If 5 or more categories are detected, split into batches of 4 and call multiple times.
 
-### 5. Fix を選んだカテゴリを一括修正
+### 5. Apply fixes for chosen categories
 
-#### A: border-radius過多
-- `border-radius` の値が過大なもの（目安: `12px` 以上）を `10px` に置換
-- Tailwind: `rounded-xl` 以上 → `rounded-lg`（8px相当）に置換
-- 例外: `border-radius: 50%` の円形アイコン・アバターはスキップ
+#### A: Excessive border-radius
+- Replace oversized `border-radius` values (guideline: `12px`+) with `10px`
+- Tailwind: replace `rounded-xl`+ with `rounded-lg` (approx. 8px)
+- Exception: skip `border-radius: 50%` circular icons/avatars
 
-#### B: pill型バッジ
-- pill形状（小型・border-radius大・inline）のラベル要素を HTML から削除（クラス名は問わない。形状で判断する）
-- バッジしか入っていない親要素も空になる場合は合わせて削除
-- CSS のバッジスタイル定義も削除
-- **注意**: 内容が技術名・ツール名・言語名の場合はBではなくLで処理する（内容優先）
+#### B: Pill badges
+- Delete pill-shaped label elements from HTML (judge by shape, not class name)
+- Also delete parent elements that become empty
+- Delete CSS badge style definitions
+- **Note:** if content is a tech/tool/language name, handle as L, not B (content takes priority)
 
-#### C: LP思考レイアウト（警告のみ・自動修正なし）
-- 単一ページに `<section>` が3つ以上ある、または独立した関心事が1スクロールに縦積みされている場合に検出（セクション名は問わない）
-- 以下を提案としてユーザーに提示する：
-  - トップ画面はナビゲーションのみにする
-  - 各セクションは別ページ（別HTMLまたは別ルート）に分割する
-  - スクロールではなく画面遷移で設計する（1画面1責務）
+#### C: LP-style layout (warn only, no auto-fix)
+- Detect when a single page has 3+ `<section>` elements or multiple independent concerns in one scroll (section names irrelevant)
+- Propose to the user:
+  - Make the top page navigation-only
+  - Split each section into a separate page (separate HTML or route)
+  - Design with page transitions, not scrolling (one screen = one responsibility)
 
-#### D: アクセントカラー過多（警告のみ・自動修正なし）
-- 有彩色（グレー系・黒・白以外）が使われている箇所を列挙してユーザーに提示する
-- borderがある要素に有彩色の背景がある場合はH（塗りつぶし）として扱う（H優先）
-- 以下を提案する：
-  - 背景: 白（`#ffffff`）
-  - テキスト: 黒（`#111111` 程度）
-  - アクセント: 黒またはダークグレー
-  - ボーダー: `rgba(0,0,0,0.1)` 程度の薄い黒
-  - グラデーション・カラーシャドウは原則削除
+#### D: Excessive accent color (warn only, no auto-fix)
+- List all locations where chromatic colors (non-grey/black/white) are used and present to user
+- Elements with a border AND a chromatic background: handle as H (H takes priority)
+- Propose:
+  - Background: white (`#ffffff`)
+  - Text: black (approx. `#111111`)
+  - Accent: black or dark grey
+  - Border: approx. `rgba(0,0,0,0.1)`
+  - Remove gradients and color shadows
 
-#### E: ページの情報責務の欠如（警告のみ・自動修正なし）
-- 各ページのHTML構造を読んで、ページが担うべき情報を果たしているか確認する
-- 以下を提案する：
-  - トップには最重要情報の要約（何者か・何ができるか）を置く
-  - サブページは1ページ1責務で設計する
-  - 各ページを開いた瞬間に「このページで何ができるか」が分かる構成にする
-  - サブページへの遷移はナビゲーション（ヘッダー・サイドバー等、サイトの構造に合わせた形）に集約する
+#### E: Missing page responsibility (warn only, no auto-fix)
+- Read the HTML structure of each page and check whether it fulfills its information responsibility
+- Propose:
+  - Put a summary of the most important info on the top page (who/what it does)
+  - One page = one responsibility
+  - Make each page's purpose clear at a glance
+  - Consolidate navigation into header/sidebar etc. (to match the site's structure)
 
-#### F: テキストの説明文化（警告のみ・自動修正なし）
+#### F: Prose-ified copy (warn only, no auto-fix)
 
-- テキストに技術名・ツール名が含まれている場合はFではなくLで処理する（L優先）
-- Fが対象とするのは技術名を使っていないが「〇〇を中心に△△を手がけています」のような説明文調になっているケース
+- If text contains tech/tool names, handle as L, not F (L takes priority)
+- F applies to text that reads like a description ("I specialize in X and handle Y") without tech names
 
-以下の型と例は参考として使い、そのまま流用しない。サイトの内容・ターゲット・トーンを読んで、そのサイトに固有のコピー案を複数考えてユーザーに提示する。
+The following principles and examples are for reference only — do not copy verbatim. Read the site's content, target audience, and tone, then come up with multiple copy suggestions specific to that site.
 
-推奨の原則と例（参考。そのまま使わず、サイト固有の言葉で書く）：
+**Principle: explain plainly what changes and how. Don't write catchphrases.**
+- Top page copy should be short, but a complete sentence with subject and predicate — not a fragment like "Into something that works."
+- Headings and subtitles should communicate in one line what the page is for
+- CTA text should make clear what happens ("See my work" beats "Learn more")
 
-**原則: 「何がどう変わるか」を普通に説明する。キャッチコピーにしない**
-- トップのコピーは短く。ただし「動くものへ。」のような断片ではなく、主語と述語のある一文にする
-- 見出し・サブタイトルは「何ができるページか」を一言で伝える
-- CTAのテキストは「何が起きるか」を明示する（「詳しく見る」より「作品を見る」）
+**Examples (reference — always write in the site's own words):**
+- Portfolio top: "I design and operate web services solo, from concept to production."
+- Portfolio top: "An indie developer who keeps shipping things: SNS, tools, bots."
+- Service: "Manage your team's schedule in one place."
+- Tool: "Paste a URL and get the key points extracted."
 
-**例（参考）：**
-- ポートフォリオトップ: 「Webサービスをひとりで設計から運用まで手がけています。」
-- ポートフォリオトップ: 「SNS・ツール・ボットなど、動くものをつくり続けている個人開発者です。」
-- サービス紹介: 「チームの予定を一箇所にまとめて管理できます。」
-- ツール紹介: 「URLを貼るだけでページの要点を取り出せます。」
+#### G: Missing visuals per page (warn only, no auto-fix)
+- Check whether each page has only text and navigation
+- For the top page, check for these 4 elements and flag what's missing: (1) name/service name (2) one-line copy (3) real visual (4) call to action
+- For subpages, check whether real artifacts (product screenshots, work samples, diagrams, comparisons) are present
+- When proposing implementations, explicitly note: no hover animations or excessive motion
 
-#### G: ページごとのビジュアル不足（警告のみ・自動修正なし）
-- 各ページにテキストとナビゲーションしかないか確認する
-- トップは（1）名前/サービス名（2）一行コピー（3）実物ビジュアル（4）導線 の4要素を確認し、不足しているものを指摘する
-- サブページはそのページの目的を裏付ける実物（プロダクト画面・制作物・図・比較など）が置かれているか確認する
-- 実装提案の際はホバーアニメーション等の過剰な動きをつけないよう明示する
+#### H: Fill-based separation (warn only, no auto-fix)
+- List all elements with a border that have a non-pure-white background and present to user
+- Propose:
+  - Change background to white, use border alone for separation
+  - Replace CTAs with text links (main CTA: bold + underline, sub CTA: light + grey + underline)
+  - Add more whitespace where decoration was removed
 
-#### H: 塗りつぶしによる区別（警告のみ・自動修正なし）
-- borderがある要素で純白以外の背景色を持つものを列挙してユーザーに提示する
-- 以下を提案する：
-  - 背景を白に変更し、borderだけで区別する
-  - CTAはテキストリンクで代替する（メインCTA: 太字＋アンダーライン、サブCTA: 細字＋グレー＋アンダーライン）
-  - 装飾を削った分、周囲の余白を広めに取る
+#### I: Japanese font mistakes
+- Add Japanese fonts to `font-family`: `system-ui, -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'YuGothic', 'Meiryo', sans-serif`
+- Body `line-height` ≤ `1.4` → replace with `1.75`
+- Body `letter-spacing` ≤ `-0.03em` → relax to `-0.02em` (headings only allowed, skip body)
+- `font-weight: 300` → replace with `font-weight: 400`
+- Remove `300` / `600` from Google Fonts weight list, keep only `400;500;700`
 
-#### I: 日本語フォント設計ミス
-- `font-family` に日本語フォントを追加: `system-ui, -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'YuGothic', 'Meiryo', sans-serif`
-- 本文の `line-height` が `1.4` 以下 → `1.75` に置換
-- 本文の `letter-spacing` が `-0.03em` 以下 → `-0.02em` に緩める（見出しのみ許容、本文はスキップ）
-- `font-weight: 300` → `font-weight: 400` に置換
-- Google Fonts のweight指定から `300` / `600` を削除し `400;500;700` の3種に絞る
-
-#### J: タップハイライト未消去
-- CSSのグローバルリセット部分に以下を追加する：
+#### J: Tap highlight not removed
+- Add the following to the global CSS reset:
   ```css
   a, button { -webkit-tap-highlight-color: transparent; }
   ```
 
-#### K: サブページのスクロール過多
+#### K: Subpage scroll overload
 
-**自動修正：**
-- サブページのセクション `padding-top` / `padding-bottom` が過大なもの（目安: `80px` 以上）→ `40px` に圧縮（目安であり絶対値ではない）
-- `min-height: 100svh` / `min-height: 100vh` がサブページのセクションに使われていれば削除
+**Auto-fix:**
+- Compress section `padding-top` / `padding-bottom` ≥ `80px` to `40px` (guideline, not absolute)
+- Remove `min-height: 100svh` / `min-height: 100vh` from subpage sections
 
-**提案のみ（AskUserQuestionで確認）：**
-- アイテム数が多いページ（目安: 5件以上）は「絞り込みと別ページ化」を提案（目安であり絶対値ではない）
-- カードグリッドがリスト形式の方が1画面に収まる場合はレイアウト変更を提案
-- 最後に「このページのスクロールは情報量として正当化できますか？」をユーザーに問いかける
+**Propose only:**
+- For pages with many items (guideline: 5+), propose trimming and moving the rest to a separate page (guideline, not absolute)
+- If a list layout would fit more content in one screen than a card grid, propose the layout change
+- Ask the user: "Is the scroll on this page justified by the content?"
 
-#### L: 技術名・手段で説明している
+#### L: Describing with tech names
 
-HTMLを読んでコンテンツの内容を確認し、形式に応じて以下のように対応する。
+Read the HTML to confirm content, then respond based on format:
 
-**（1）散文テキストの場合（警告のみ・自動修正なし）**
+**(1) Prose text (warn only, no auto-fix)**
 
-以下の原則と例は参考として使い、そのまま流用しない。サイト・プロダクトの内容とターゲットを読んで、そのプロダクト固有の説明文案を複数考えてユーザーに提示する。
+The following principles and examples are for reference only — do not copy verbatim. Read the site/product content and target audience, then come up with multiple description suggestions specific to that product.
 
-原則：
-- 主語はユーザーか、プロダクト自体にする
-- 「何を使って作ったか」ではなく「何ができるか・使うとどうなるか」を書く
-- 技術名・実装名・アーキテクチャ用語は使わない（React、API、DB、フルスクラッチ、モジュール化、等）
-- 長さは2〜3文が目安。キャッチコピーにせず、かといって仕様書にもしない
+Principles:
+- Make the user or the product itself the subject
+- Write "what it does / what changes when you use it" — not "what it was built with"
+- Don't use tech names, implementation names, or architecture terms (React, API, DB, from scratch, modular, etc.)
+- Aim for 2–3 sentences. Not a catchphrase, not a spec sheet.
 
-例（サイト種別ごとの参考。そのまま使わないこと）：
+Examples (by site type — do not copy):
 
-*ポートフォリオ — プロジェクトカード*
-- 「自分で設計・運用しているSNS。タイムライン投稿、フォロー、通知など一通りの機能がある。本番稼働中。」
-- 「音声かテキストで支出を記録するアプリ。『コンビニで500円』のような自然な文章をそのまま入力できる。」
-- 「画像を一時的に共有するサービス。URLを渡すだけで見られて、48時間後に自動削除される。」
-- 「特定のテーマに絞ったQ&Aサービス。質問を投稿すると、同じテーマに関心のある人から回答が集まる。」
-- 「ブラウザで動くタスク管理ツール。プロジェクトをボード形式で管理できる。サインアップ不要で使い始められる。」
+*Portfolio — project card*
+- "An SNS I designed and operate myself. Has all the basics: timeline, follows, notifications. Live in production."
+- "An app for recording expenses by voice or text. You can just type something like 'convenience store, $5'."
+- "A temporary image sharing service. Share the URL and it's viewable; auto-deleted after 48 hours."
+- "A Q&A service focused on a specific topic. Post a question and answers come in from people interested in the same area."
+- "A task management tool that runs in the browser. Manage projects in board format. No sign-up needed to get started."
 
-*SaaS / ツール紹介*
-- 「複数のSNSへの投稿をまとめて管理できる。スケジュール設定、下書き保存、投稿履歴の確認ができる。」
-- 「毎月の収支を自動で集計して見せてくれるアプリ。銀行口座を連携するだけで、カテゴリ別の支出が一覧になる。」
-- 「URLを貼るだけで、そのページの要点をまとめてくれるツール。長い記事や仕様書を読む前に使うと時間が節約できる。」
-- 「フォームを作ってURLを共有するだけでアンケートが取れる。回答はリアルタイムで集計され、グラフで確認できる。」
+*SaaS / Tool*
+- "Manage posts to multiple SNS in one place. Schedule posts, save drafts, and review post history."
+- "An app that auto-tallies your monthly income and expenses. Connect your bank account and see spending by category."
+- "A tool that extracts the key points from any page — just paste the URL. Saves time before reading long articles or specs."
+- "Create a form, share the URL, and start collecting survey responses. Results are tallied in real time as a chart."
 
-*アプリ紹介（モバイル想定）*
-- 「今日の気分を一言だけ記録するアプリ。振り返ったとき、その日の感情の変化が時系列で見られる。」
-- 「読んだ本の記録をつけるアプリ。ひとこと感想と読了日を残せる。本棚のように並べて見返せる。」
-- 「習慣を記録するアプリ。毎日続けたいことを登録しておくと、達成した日が塗りつぶされていく。」
+*App (mobile)*
+- "An app for recording how you feel in one sentence a day. Look back and see how your mood changed over time."
+- "An app for tracking books you've read. Add a quick note and the date you finished. Browse your shelf later."
+- "A habit tracking app. Register what you want to keep doing daily, and watch the days fill in as you complete them."
 
-*SNS / コミュニティサービス*
-- 「写真に特化したSNS。テキスト投稿はなく、1日1枚だけ投稿できる。タイムラインはフォローした人の写真だけが並ぶ。」
-- 「読書記録をシェアするコミュニティ。同じ本を読んだ人の感想が見られて、おすすめを交換できる。」
-- 「匿名で悩みを投稿できる掲示板。共感した投稿に『わかる』を押せる。返信は同じく匿名。」
+*SNS / Community*
+- "A photo-only SNS. No text posts; one photo per day. Your timeline shows only photos from people you follow."
+- "A community for sharing book reviews. See what others thought of the same book and swap recommendations."
+- "An anonymous message board for posting worries. React with 'same' to posts you relate to. Replies are also anonymous."
 
-*サービス・会社紹介*
-- 「中小企業向けの採用サポートサービス。求人票の作成から応募者管理まで、採用にかかる事務作業を代行する。」
-- 「フリーランス向けの契約書テンプレートサービス。業種別に用意されたひな型を選んで、必要事項を埋めるだけで使える。」
-- 「オンラインで完結する会計サービス。毎月の帳簿入力、確定申告の書類作成、税務相談がセットになっている。」
+*Service / Company*
+- "A hiring support service for small businesses. We handle the paperwork: job listings, applicant management, all of it."
+- "A contract template service for freelancers. Choose a template for your industry, fill in the details, and it's ready to use."
+- "An end-to-end accounting service. Monthly bookkeeping, tax return preparation, and tax consultation — all in one package."
 
-**（2）UIパーツ（タグリスト・バッジ群・インラインリスト等）の場合（自動修正可能）**
-- 技術名・ツール名・言語名を並べたUIパーツをHTMLから削除（クラス名・配置場所は問わない。内容で判断する）
-- 空になった親要素も合わせて削除
-- 対応するCSSのスタイル定義も削除
+**(2) UI parts (tag lists, badge groups, inline lists, etc.) — auto-fix**
+- Delete the UI parts listing tech/tool/language names from HTML (class name and placement are irrelevant — judge by content)
+- Delete parent elements that become empty
+- Delete corresponding CSS style definitions
 
-#### M: 絵文字の使用
+#### M: Emoji usage
 
-1. Readでファイルを読み、絵文字が含まれているかを確認する（`<code>` / `<pre>` / `<meta>` 内は除外）
-2. 絵文字ごとに意味・文脈を読んで対応するLucideアイコン名を判断する
-3. `curl -s https://unpkg.com/lucide-static@latest/icons/{name}.svg` でSVGを取得する
-4. 取得したSVGの `<svg>` タグに `width="1em" height="1em" style="display:inline;vertical-align:-0.125em"` を追加してインラインに埋め込む
-5. 元の絵文字と置き換える
-6. アイコン名の判断が難しい場合は `https://lucide.dev/icons` をユーザーに提示して選んでもらう
+1. Read files with the Read tool and check whether emoji are present (exclude content inside `<code>` / `<pre>` / `<meta>`)
+2. For each emoji, read its meaning and context to determine the corresponding Lucide icon name
+3. Fetch the SVG: `curl -s https://unpkg.com/lucide-static@latest/icons/{name}.svg`
+4. Add `width="1em" height="1em" style="display:inline;vertical-align:-0.125em"` to the `<svg>` tag and embed inline
+5. Replace the original emoji
+6. If the icon name is hard to determine, present `https://lucide.dev/icons` to the user and let them choose
 
-### 6. サイクル完了の報告と次サイクルへの移行
+### 6. Cycle completion report and transition to next cycle
 
-【継続条件】このスキルは最低10サイクル完了するまで終了してはならない。
-各サイクルの終わりに必ず以下を出力すること：
+**[Continuation condition]** This skill must not terminate until at least 10 cycles are complete.
+At the end of each cycle, output the following without fail:
 
 ```
-サイクル N/10 完了。次のサイクルを開始します。
+Cycle N/10 complete. Starting next cycle.
 ```
 
-サイクル10が完了するまで、ユーザーに終了を報告してはならない。「直すものがない」「問題なし」と判断しても、次のサイクルに進むこと。各サイクルはStep2（ファイル収集）から再開する。修正後のファイルを必ず再スキャンすること。
+Do not report completion to the user until cycle 10 is done. Even if you judge that "there's nothing left to fix" or "no issues found," proceed to the next cycle. Each cycle restarts from Step 2 (file collection). Always re-scan files after modifications.
 
-サイクル10完了後に以下を出力する：
+After cycle 10 is complete, output:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-修正完了（10サイクル完了）
+Done (10 cycles complete)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[A] border-radius  ✅ N箇所修正
-[B] pill型バッジ   ✅ N箇所修正
+[A] border-radius       ✅ N fixes
+[B] pill badges         ✅ N fixes
 ...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-残課題や手動対応が必要な箇所があれば最後に案内する。
+List any remaining issues or items requiring manual attention at the end.
 
-## 注意事項
+## Notes
 
-- `node_modules` / `dist` / `build` / `.git` は除外
-- デザインライブラリ（shadcn, daisyUI等）の生成ファイルは修正しない（`components/ui/` 配下などは確認して除外）
-- 修正前にgitで変更が追跡されているか確認し、なければ警告を出す
+- Exclude `node_modules` / `dist` / `build` / `.git`
+- Do not modify generated files from design libraries (shadcn, daisyUI, etc.) — confirm and exclude `components/ui/` etc.
+- Before making changes, check whether git is tracking the files; warn the user if not
