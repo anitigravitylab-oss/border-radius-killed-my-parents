@@ -1,6 +1,6 @@
 ---
-name: fix-ai-design
-description: AIデザインの典型的な悪パターン（border-radius過多・pill型バッジ・LP思考レイアウト・説明文化コピー・ビジュアル不足・塗りつぶしによる区別・日本語フォントミス・技術名による説明等）をプロジェクトから検出しカテゴリ単位で修正する。/fix-ai-design で呼び出す。
+name: border-radius-killed-my-parents
+description: AIデザインの典型的な悪パターン（border-radius過多・pill型バッジ・LP思考レイアウト・説明文化コピー・ビジュアル不足・塗りつぶしによる区別・日本語フォントミス・技術名による説明等）をプロジェクトから検出しカテゴリ単位で修正する。/border-radius-killed-my-parents で呼び出す。
 user-invocable: true
 allowed-tools:
   - Bash
